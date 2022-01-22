@@ -1,20 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"time"
 
 	"github.com/showwin/speedtest-go/speedtest"
 )
-
-type fullOutput struct {
-	Timestamp outputTime        `json:"timestamp"`
-	UserInfo  *speedtest.User   `json:"user_info"`
-	Servers   speedtest.Servers `json:"servers"`
-}
-type outputTime time.Time
 
 func main() {
 	user, err := speedtest.FetchUserInfo()
@@ -29,48 +21,27 @@ func main() {
 
 	targets, err := serverList.FindServer([]int{})
 	logError(err)
-	startTest(targets, false, true)
-
-	jsonBytes, err := json.Marshal(
-		fullOutput{
-			Timestamp: outputTime(time.Now()),
-			UserInfo:  user,
-			Servers:   targets,
-		},
-	)
-	logError(err)
-
-	fmt.Println(string(jsonBytes))
+	startTest(targets)
 }
 
-func startTest(servers speedtest.Servers, savingMode bool, jsonOutput bool) {
+func startTest(servers speedtest.Servers) {
 	for _, s := range servers {
 		printServer(s)
 
 		err := s.PingTest()
 		logError(err)
 
-		if jsonOutput {
-			err := s.DownloadTest(savingMode)
-			logError(err)
-
-			err = s.UploadTest(savingMode)
-			logError(err)
-
-			continue
-		}
-
 		printLatencyResult(s)
 
-		err = testDownload(s, savingMode)
+		err = testDownload(s, false)
 		logError(err)
-		err = testUpload(s, savingMode)
+		err = testUpload(s, false)
 		logError(err)
 
 		printServerResult(s)
 	}
 
-	if !jsonOutput && len(servers) > 1 {
+	if len(servers) > 1 {
 		printAverageServerResult(servers)
 	}
 }
